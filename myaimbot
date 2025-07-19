@@ -9,8 +9,8 @@ local root = character:WaitForChild("HumanoidRootPart")
 local tool = nil
 local autoAimEnabled = false
 
--- GUI setup
 local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+
 local toggleButton = Instance.new("TextButton", screenGui)
 toggleButton.Size = UDim2.new(0, 150, 0, 40)
 toggleButton.Position = UDim2.new(0, 20, 0, 100)
@@ -18,6 +18,16 @@ toggleButton.Text = "Auto-Aim: OFF"
 toggleButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 toggleButton.TextColor3 = Color3.new(1, 1, 1)
 toggleButton.BorderSizePixel = 0
+
+local creditLabel = Instance.new("TextLabel", screenGui)
+creditLabel.Size = UDim2.new(0, 150, 0, 20)
+creditLabel.Position = UDim2.new(0, 20, 0, 145)
+creditLabel.Text = "Made by bokrvictor"
+creditLabel.BackgroundTransparency = 1
+creditLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+creditLabel.TextStrokeTransparency = 0.8
+creditLabel.Font = Enum.Font.SourceSansItalic
+creditLabel.TextSize = 14
 
 toggleButton.MouseButton1Click:Connect(function()
 	autoAimEnabled = not autoAimEnabled
