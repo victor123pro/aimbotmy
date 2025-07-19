@@ -1,0 +1,112 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local root = character:WaitForChild("HumanoidRootPart")
+
+local autoAimEnabled = false
+local tool = nil
+local avoidDistance = 10 -- afstand waarop je begint te ontwijken
+
+-- GUI toggle knop
+local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+local toggleButton = Instance.new("TextButton", screenGui)
+toggleButton.Size = UDim2.new(0, 150, 0, 40)
+toggleButton.Position = UDim2.new(0, 20, 0, 100)
+toggleButton.Text = "Auto-Aim: OFF"
+toggleButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+toggleButton.TextColor3 = Color3.new(1, 1, 1)
+toggleButton.BorderSizePixel = 0
+
+toggleButton.MouseButton1Click:Connect(function()
+	autoAimEnabled = not autoAimEnabled
+	toggleButton.Text = "Auto-Aim: " .. (autoAimEnabled and "ON" or "OFF")
+end)
+
+-- Vind het zwaard in je hand
+local function findTool()
+	for _, item in pairs(character:GetChildren()) do
+		if item:IsA("Tool") then
+			return item
+		end
+	end
+	return nil
+end
+
+-- Vind de dichtstbijzijnde levende vijand binnen bereik
+local function getClosestEnemy(maxDistance)
+	local closest = nil
+	local shortest = maxDistance or 15
+
+	for _, other in pairs(Players:GetPlayers()) do
+		if other ~= player and other.Character then
+			local humanoid = other.Character:FindFirstChildOfClass("Humanoid")
+			local targetRoot = other.Character:FindFirstChild("HumanoidRootPart")
+
+			if humanoid and humanoid.Health > 0 and targetRoot then
+				local dist = (targetRoot.Position - root.Position).Magnitude
+				if dist < shortest then
+					shortest = dist
+					closest = other
+				end
+			end
+		end
+	end
+
+	return closest
+end
+
+-- Ontwijk functie: beweeg uit de buurt van vijanden die te dichtbij komen
+local function avoidEnemies()
+	for _, other in pairs(Players:GetPlayers()) do
+		if other ~= player and other.Character then
+			local humanoid = other.Character:FindFirstChildOfClass("Humanoid")
+			local targetRoot = other.Character:FindFirstChild("HumanoidRootPart")
+
+			if humanoid and humanoid.Health > 0 and targetRoot then
+				local dist = (targetRoot.Position - root.Position).Magnitude
+				if dist < avoidDistance then
+					-- Beweeg weg van vijand
+					local directionAway = (root.Position - targetRoot.Position).Unit
+					local newPos = root.Position + directionAway * (avoidDistance - dist + 1)
+					root.CFrame = CFrame.new(newPos, newPos + root.CFrame.LookVector)
+					return true -- ontwijkt, dus even stoppen met andere acties
+				end
+			end
+		end
+	end
+	return false
+end
+
+-- Natuurlijk draaien naar vijand
+local function turnSmoothly(targetCFrame)
+	local goal = { CFrame = targetCFrame }
+	local tween = TweenService:Create(root, TweenInfo.new(0.15, Enum.EasingStyle.Linear), goal)
+	tween:Play()
+end
+
+-- Hoofdloop
+RunService.RenderStepped:Connect(function()
+	if not autoAimEnabled then return end
+	character = player.Character or player.CharacterAdded:Wait()
+	root = character:FindFirstChild("HumanoidRootPart")
+	if not root then return end
+	tool = tool or findTool()
+	if not tool then return end
+
+	-- Eerst ontwijken, als vijand te dichtbij is
+	if avoidEnemies() then return end
+
+	local target = getClosestEnemy(15)
+	if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+		local targetPos = target.Character.HumanoidRootPart.Position
+		local lookAt = CFrame.new(root.Position, targetPos)
+		turnSmoothly(lookAt)
+
+		if tool:IsDescendantOf(character) and tool.Enabled then
+			tool:Activate()
+		end
+	end
+end)
